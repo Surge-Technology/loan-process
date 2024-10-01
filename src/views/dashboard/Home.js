@@ -12,6 +12,8 @@ import {
   CCarouselItem,
   CContainer,
   CImage,
+  CNavItem,
+  CNavLink,
 } from '@coreui/react'
 import './dashboard.css'
 import { CCard, CCardBody, CCol, CRow } from '@coreui/react'
@@ -33,6 +35,11 @@ import { MDBCol, MDBContainer, MDBFooter, MDBRow } from 'mdb-react-ui-kit'
 import { Shield } from '@mui/icons-material'
 import Check from '@mui/icons-material/Check'
 import SupportAgent from '@mui/icons-material/SupportAgent'
+import { NavLink, useNavigate } from "react-router-dom"
+import axios from 'axios'
+
+
+
 
 const Dashboard = () => {
   const showIcons = [
@@ -44,6 +51,7 @@ const Dashboard = () => {
     { icon: cilMoney, text: 'Withdraw' },
   ]
   const [activeIndex, setActiveIndex] = useState(0)
+  let history = useNavigate()
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -52,6 +60,7 @@ const Dashboard = () => {
     return () => clearInterval(interval)
   }, [showIcons.length])
   const handleStart = () => {
+
     fetch('http://localhost:8080/StartWorkFlow')
       .then((response) => {
         if (!response.ok) {
@@ -93,8 +102,8 @@ const Dashboard = () => {
       <CContainer className="d-flex justify-content-center mt-3">
         <CRow xs={{ cols: 1 }} md={{ cols: 2 }}>
           <CCol className="ml-6 mr-6 mr-7 mb-4">
-            <div className="mx-3 " style={{ padding: '3px 2px' }}>
-              <CCardImage
+            {/* <div className="mx-3 " style={{ padding: '3px 3px' }}> */}
+              {/* <CCardImage
                 className="rounded-rectangle shadow-sm hover-zoom"
                 src="\src\assets\images\a1.jpg"
                 onClick={handleStart}
@@ -103,34 +112,52 @@ const Dashboard = () => {
                   height: '400px',
                   padding: '4px 4px',
                   borderRadius: '15px',
-                  
+
                 }
-              }
-              ></CCardImage>
-              <div className="d-flex justify-content-center mt-3">
-                <a href="#" className="btn btn-primary hover-btn-zoom" onClick={handleStart}>
-                  Open Account{' '}
-                </a>
+                }
+              ></CCardImage> */}
+              <div cclassName="mx-3 " style={{ padding: '3px 3px',listStyle:'none' }}>
+                {/* <a href="#" className="btn btn-primary hover-btn-zoom"  onClick={handleStart}>
+                  New Customer{' '}
+                </a> */}
+                <CNavItem >
+                  <CNavLink to="/createCustomer" as={NavLink}>
+                    <CCardImage
+                      className="rounded-rectangle shadow-sm hover-zoom"
+                      src="\src\assets\images\newcustomer.png"
+                      onClick={handleStart}
+                      style={{
+                        width: '400px',
+                        height: '400px',
+                        padding: '4px 4px',
+                        borderRadius: '15px',
+                        cursor: 'pointer',
+                      }
+                      }
+                    ></CCardImage>
+                  </CNavLink>
+                </CNavItem>
               </div>
-            </div>
+            {/* </div> */}
           </CCol>
           <CCol className="ml-6 mr-6 mr-7 mb-4">
             <div className="mx-3 " style={{ padding: '3px 3px' }}>
               <CCardImage
                 className="rounded-rectangle shadow-sm hover-zoom"
-                src="\src\assets\images\a4.jpg"
+                src="\src\assets\images\applyloan.png"
                 style={{
                   width: '400px',
                   height: '400px',
                   padding: '4px 4px',
                   borderRadius: '15px',
+                  
                 }}
               ></CCardImage>
-              <div className="d-flex justify-content-center mt-3">
+              {/* <div className="d-flex justify-content-center mt-3">
                 <a href="#" className="btn btn-primary hover-btn-zoom">
                   Apply Loan
                 </a>
-              </div>
+              </div> */}
             </div>
           </CCol>
         </CRow>

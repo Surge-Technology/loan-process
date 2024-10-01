@@ -52,28 +52,33 @@ const AppHeader = () => {
           <CNavItem className='mt-2'>
             <a href="#">
               <img src={icons} style={{ width: '50px', height: '30px' }} alt="My Icon" />
-             
+
             </a>
           </CNavItem>
-          <CNavItem className="d-none d-md-block ms-3">
-            <CNavLink href="#" className='account nav-link-custom'>Open Account</CNavLink>
+          <CNavItem className="d-none d-md-block highlight" >
+            <CNavLink to="/home" as={NavLink}>
+              Home</CNavLink>
           </CNavItem>
-          <CNavItem className="d-none d-md-block">
+          <CNavItem className="d-none d-md-block highlight" >
+            <CNavLink to="/createCustomer" as={NavLink}>
+              New Customer</CNavLink>
+          </CNavItem>
+          <CNavItem className="d-none d-md-block highlight" >
             <CNavLink href="#" className='loan nav-link-custom'>Loan Request</CNavLink>
           </CNavItem>
         </CHeaderNav>
         <div className="d-flex flex-column">
-        <a href="#">
-        <img
-        className="d-md-none mt-2"
-        src={icons}
-        style={{ width: '50px', height: '30px' }}
-        alt="My Icon"
-        />
-        </a>
-        <CButton className="d-md-none mb-2" onClick={() => setIsOpen(!isOpen)}>
-          <CIcon icon={isOpen ? cilX : cilMenu} />
-        </CButton>
+          <a href="#">
+            <img
+              className="d-md-none mt-2"
+              src={icons}
+              style={{ width: '50px', height: '30px' }}
+              alt="My Icon"
+            />
+          </a>
+          <CButton className="d-md-none mb-2" onClick={() => setIsOpen(!isOpen)}>
+            <CIcon icon={isOpen ? cilX : cilMenu} />
+          </CButton>
         </div>
         <CHeaderNav>
           <li className="nav-item ">
@@ -133,8 +138,8 @@ const AppHeader = () => {
               XIndex: '100',
               width: '50%',
               // backgroundColor:'#F3C468',
-              
-              backgroundColor:"rgb(255 255 255 / 99%)",
+
+              backgroundColor: "rgb(255 255 255 / 99%)",
               // borderRadius: '16px',
               // borderBlockColor: 'blue',
               overflow: auto,
@@ -143,10 +148,12 @@ const AppHeader = () => {
             }}
           >
             <CCardBody style={{ listStyle: 'none' }}>
+              
               <CNavItem>
-                <CNavLink href="#">Open Account</CNavLink>
+                <CNavLink to="/createCustomer" as={NavLink}>
+                  New Customer</CNavLink>
               </CNavItem>
-             
+
               <CNavItem>
                 <CNavLink href="#">Loan Request</CNavLink>
               </CNavItem>
