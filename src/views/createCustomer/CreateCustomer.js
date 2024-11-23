@@ -1,507 +1,597 @@
-import React, { useState } from 'react';
-import classNames from 'classnames';
-
+/* eslint-disable prettier/prettier */
+import React, { useState, useEffect } from 'react'
+import { Formik, Form, ErrorMessage } from 'formik'
+import * as Yup from 'yup' // Import Yup for validation
+import moment from 'moment'
+import axios from 'axios'
+import Swal from 'sweetalert2'
+import { useParams } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import {
-    CButton,
-    CCard,
-    CCardBody,
-    CCardImage,
-    CCardTitle,
-    CCol,
-    CContainer,
-    CForm,
-    CFormCheck,
-    CFormInput,
-    CFormLabel,
-    CFormSelect,
-    CRow,
-} from '@coreui/react';
-import { Container, Select } from '@mui/material';
-import { Formik, Field, Form, ErrorMessage } from 'formik';
-import moment from 'moment/moment';
-import * as Yup from "yup";
-import axios from 'axios';
-import Swal from 'sweetalert2';
-import { ToastContainer, toast } from 'react-toastify';
-import { useNavigate } from "react-router-dom";
-
-
-// // Import the validation function
-// import {validateForm} from './formValidation';  // Adjust the path based on your file structure
+  CButton,
+  CCard,
+  CCardBody,
+  CCardTitle,
+  CFormInput,
+  CRow,
+  CCol,
+  CFormSelect,
+  CCardImage,
+  CSpinner,
+  CFormCheck,
+  CFormLabel,
+  CFormSwitch,
+} from '@coreui/react'
+import { Container } from '@mui/material'
 
 const CreateCustomer = () => {
-    const [state, setState] = useState({
-        firstName: '',
-        lastName: '',
-        birthDate: '',
-        nationality: '',
-        gender: '',
-        maritalStatus: '',
-        phone: '',
-        email: '',
-        address: '',
-        city: '',
-        state: '',
-        country: '',
-        pincode: '',
-        occupation: '',
-        annualIncome: '',
-        isAgreed: false
-    });
+  const [state, setState] = useState({
+    firstName: '',
+    lastName: '',
+    legalFullName: '',
+    birthDate: '',
+    nationality: '',
+    gender: '',
+    maritalStatus: '',
+    spouseStatus: '',
+    phone: '',
+    email: '',
+    city: '',
+    state: '',
+    postalCode: '',
+    occupation: '',
+    nationalId: '',
+    nationalIdType: '',
+    employmentStatus:''
+  })
 
-    let history = useNavigate();
-    const [isAgreed, setIsAgreed] = useState(false);
+  const initialValues = { ...state }
+  const params = useParams()
+  const navigate = useNavigate()
+  const [isSubmitting, setIsSubmitting] = useState(false)
+ // Define Yup validation schema
+  const validationSchema = Yup.object().shape({
+    firstName: Yup.string()
+      .required('First Name is required')
+      .matches(/^[aA-zZ\s]+$/, 'Only alphabets are allowed'),
+    lastName: Yup.string()
+      .required('Last Name is required')
+      .matches(/^[aA-zZ\s]+$/, 'Only alphabets are allowed'),
+    legalFullName: Yup.string()
+      .required('Full Name is required')
+      .matches(/^[aA-zZ\s]+$/, 'Only alphabets are allowed'),
 
-    const initialValues = {
-        firstName: state.firstName,
-        lastName: state.lastName,
-        birthDate: state.birthDate,
-        nationality: state.nationality,
-        gender: state.gender,
-        maritalStatus: state.maritalStatus,
-        phone: state.phone,
-        email: state.email,
-        address: state.address,
-        city: state.city,
-        state: state.state,
-        country: state.country,
-        pincode: state.pincode,
-        occupation: state.occupation,
-        annualIncome: state.annualIncome,
-        isAgreed: state.isAgreed
+    birthDate: Yup.string()
+      .required('Birth date is required')
+      .test(
+        'DOB',
+        'Age must be at least 18 years',
+        (date) => moment().diff(moment(date), 'years') >= 18,
+      ),
+    nationality: Yup.string()
+      .matches(/^[aA-zZ\s]+$/, 'Only alphabets are allowed')
+      .required('Nationality is required'),
+    gender: Yup.string()
+      .oneOf(['Male', 'Female', 'Other'], 'Invalid gender')
+      .required('Gender is required'),
+    maritalStatus: Yup.string()
+      .oneOf(['married', 'unmarried'], 'Invalid marital status')
+      .required('Marital Status is required'),
+      employmentStatus: Yup.string()
+      .oneOf(['self-employed', 'employed','unemployed'], 'Invalid marital status')
+      .required('Marital Status is required'),
+   
+    phone: Yup.string()
+      .min(10, 'Minimum 10 digits!')
+      .max(14, 'Maximum 14 digits!')
+      .matches(/^\d+$/, 'Phone must be numeric')
+      .required('Phone number is required'),
+    email: Yup.string()
+      .email('Invalid email format')
+      .required('Email is required')
+      .email('Invalid mail address'),
+    city: Yup.string().required('city is required'),
+    state: Yup.string().required('state is required'),
+    country: Yup.string().required('country is required'),
+    nationalId: Yup.string().required('National Id is required'),
+    nationalIdType: Yup.string().required('National Id Type is required'),
+
+    address: Yup.string().required('Address is required'),
+    postalCode: Yup.string()
+      .matches(/^\d{5,6}$/, 'postalCode must be valid')
+      .min(6, 'Must be exactly 6 digits')
+      .max(6, 'Must be exactly 6 digits')
+      .required('postalCode is required'),
+    occupation: Yup.string().required('Occupation is required'),
+    annualIncome: Yup.number()
+      .required('Annual income is required')
+      .min(0, 'Income cannot be negative'),
+  })
+ 
+  const handleInputChange = (e) => {
+    const { name, value } = e.target
+    setState((prevState) => ({
+      ...prevState,
+      [name]: value,
+    }))
+  }
+
+  const dateHandleChange = (name, value) => {
+    setState((prevState) => ({
+      ...prevState,
+      [name]: value,
+    }))
+  }
+
+  const SubmitData = (values) => {
+    
+    let payload = {
+      ...values,
+      dob: String(moment(values.birthDate).format('MM-DD-YYYY')),
     }
+    console.log('Payload that will be submitted is :', payload)
 
-    const handleInputChange = (e) => {
-        const { name, value } = e.target;
-        //if (name === "phoneNumber") {
-        //   const val = value.replace(/[^0-9]/g, "");
-        //   const formattedPhoneNumber = val.replace(/(\d{3})(\d{3})(\d{4})/, "($1) $2-$3");
-        //   setState((prevState) => ({
-        //     ...prevState,
-        //     [name]: formattedPhoneNumber
-        //   }))
-        // } else {
-        setState((prevState) => ({
-            ...prevState,
-            [name]: value
-        }))
-    }
-    //}
+    if (isSubmitting) return
+    setIsSubmitting(true)
+    axios
+      .post(`http://localhost:8080/claimAndCompleteTask`, payload)
+      // .then((res) => {
+      //     console.log('response from backend ', res);
+      //     Swal.fire('Success', 'Customer created successfully', 'success');
+      // })
 
-    const dateHandleChange = (name, value) => {
-        setState((prevState) => ({
-            ...prevState,
-            [name]: value
-        }))
-    }
-
-    const selectFieldHandleChange = (name, value) => {
-        setState((prevState) => ({
-            ...prevState,
-            [name]: value
-        }))
-    }
-
-    // Handle form submit
-    const SubmitData = (values) => {
-        setState((prevState) => ({ ...prevState }))
-        let payload = {
-            "customerId": "",
-            "firstName": values.firstName,
-            "lastName": values.lastName,
-            "dob": moment(values.birthDate).format("MM-DD-YYYY"),
-            "gender": values.gender,
-            "maritalstatus": values.maritalStatus,
-            "nationality": values.nationality,
-            "phone": values.phone,
-            "email": values.email,
-            "address": values.address,
-            "city": values.city,
-            "state": values.state,
-            "country": values.country,
-            "pincode": values.pincode,
-            "occupation": values.occupation,
-            "annualIncome": values.annualIncome,
-        }
-        console.log("Payload that will be submitted is :", payload);
-        // Swal.fire(
-        //              //err.response.data.message,
-        //              'Customer created successfully '
-        //         )
-
-
-         axios.post(`http://localhost:8080/create`, payload).then((res) => {
-         console.log("response from background " + res);
-         Swal.fire(
-                     err.response.data.message,
-                     'Customer created successfully '
-                )
-                setState((prevState)=>({...prevState}));
-
-        }).catch(err => {
-            console.error("Error sending data:", err.response ? err.response.data : err.message);
-        setState((prevState) => ({ ...prevState }));
-
-            Swal.fire(
-                err.response.data.message,
-                'Please try again '
-            )
+      .then((res) => {
+        // Show success alert
+        Swal.fire({
+          title: 'Success',
+          text: 'Account created successfully',
+          icon: 'success',
+          confirmButtonText: 'OK',
+        }).then(() => {
+          navigate('/applyLoan/selectType')
+          // Clear form after the OK button is clicked
+          //   document.getElementById('myForm').reset();
         })
+      })
 
-    };
+      .catch((err) => {
+        console.error('Error sending data:', err.response ? err.response.data : err.message)
+        Swal.fire('Error', 'Please try again', 'error')
+      })
+  }
 
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [])
 
+  return (
+    <>
+      <Container className="d-flex justify-content-center align-items-center mt-2">
+        <CRow>
+          <CCol>
+            <CCard
+              className="mb-3 d-flex justify-content-center align-items-center"
+              style={{
+                maxWidth: '1200px',
+                width: '132%',
+                marginLeft: '-50px',
+                marginRight: '70px',
+              }}
+            >
+              <CCol md={10}>
+                <CCardBody>
+                  <CCardTitle className="mt-3 mb-3">
+                    {' '}
+                    <strong>Customer Registration Form</strong>
+                  </CCardTitle>
+                  <Formik
+                    initialValues={initialValues}
+                    validationSchema={validationSchema} // Use the validation schema
+                    onSubmit={SubmitData}
+                  >
+                    {({ values, handleChange, handleSubmit, handleBlur, errors, touched }) => (
+                      <Form id="myForm" onSubmit={handleSubmit}>
+                        <CRow>
+                          <CCol className="text-start">
+                            <div>
+                              Personal Details:
+                              <span style={{ color: 'red', fontSize: '20px' }}>*</span>
+                            </div>
+                          </CCol>
+                        </CRow>
+                        <CRow xs={{ gutter: 2 }}>
+                          <CCol>
+                            <CFormInput
+                              type="text"
+                              name="firstName"
+                              floatingLabel="First Name"
+                              value={values.firstName}
+                              onChange={handleInputChange}
+                              onChangeCapture={handleChange}
+                              onBlur={handleBlur}
+                              invalid={touched.firstName && !!errors.firstName}
+                            />
+                            <ErrorMessage
+                              name="firstName"
+                              component="div"
+                              className="text-danger"
+                            />
+                          </CCol>
+                          <CCol>
+                            <CFormInput
+                              type="text"
+                              name="lastName"
+                              floatingLabel="Last Name"
+                              value={values.lastName}
+                              onChange={handleInputChange}
+                              onChangeCapture={handleChange}
+                              onBlur={handleBlur}
+                              invalid={touched.lastName && !!errors.lastName}
+                            />
+                            <ErrorMessage name="lastName" component="div" className="text-danger" />
+                          </CCol>
+                        </CRow>
+                        <CRow>
+                          <CCol className="text-start">
+                            <div>
+                              Full Name:(as per nationality){' '}
+                              <span style={{ color: 'red', fontSize: '20px' }}>*</span>
+                            </div>
+                          </CCol>
+                        </CRow>
+                        <CRow>
+                          <CCol>
+                            <CFormInput
+                              type="text"
+                              id="floatingInput"
+                              name="legalFullName"
+                              value={values.legalFullName}
+                              floatingClassName="mb-2"
+                              floatingLabel="FullName"
+                              placeholder="FullName"
+                              onChange={handleInputChange}
+                              onChangeCapture={handleChange}
+                              onBlur={handleBlur}
+                              invalid={touched.legalFullName && !!errors.legalFullName}
+                            />
+                            <ErrorMessage
+                              name="legalFullName"
+                              component="div"
+                              className="errmsg text-danger"
+                            ></ErrorMessage>
+                          </CCol>
+                        </CRow>
+                        <CRow xs={{ gutter: 2 }} className="mb-2 mt-2">
+                          <CCol>
+                            <CFormInput
+                              type="date"
+                              name="birthDate"
+                              floatingLabel="DOB"
+                              selected={values.birthDate ? new Date(values.birthDate) : null}
+                              onChange={(e) => {
+                                dateHandleChange('birthDate', e)
+                              }}
+                              onChangeCapture={handleChange}
+                              onBlur={handleBlur}
+                              invalid={touched.birthDate && !!errors.birthDate}
+                            />
+                            <ErrorMessage
+                              name="birthDate"
+                              component="div"
+                              className="text-danger"
+                            />
+                          </CCol>
+                          <CCol>
+                            <CFormInput
+                              type="text"
+                              id="floatingInput"
+                              name="phone"
+                              value={values.phone}
+                              floatingClassName="mb-2"
+                              floatingLabel="Phone number"
+                              placeholder="Phone Number"
+                              onChange={handleInputChange}
+                              onChangeCapture={handleChange}
+                              onBlur={handleBlur}
+                              invalid={touched.phone && !!errors.phone}
+                            />
+                            <ErrorMessage
+                              name="phone"
+                              component="div"
+                              className="errmsg text-danger"
+                            ></ErrorMessage>
+                          </CCol>
+                        </CRow>
+                        <CRow xs={{ gutter: 2 }} className="mb-2 mt-2">
+                          <CCol>
+                            <CFormSelect
+                              name="gender"
+                              floatingLabel="Gender"
+                              value={values.gender}
+                              onChange={handleInputChange}
+                              onChangeCapture={handleChange}
+                              onBlur={handleBlur}
+                              invalid={touched.gender && !!errors.gender}
+                              options={[
+                                { value: 'select', label: 'Select' },
+                                { value: 'Male', label: 'Male' },
+                                { value: 'Female', label: 'Female' },
+                                { value: 'Other', label: 'Other' },
+                              ]}
+                            />
+                            <ErrorMessage name="gender" component="div" className="text-danger" />
+                          </CCol>
 
-    const ValidationSchema = () => {
-        return Yup.object().shape({
-            firstName: Yup.string().matches(/^[aA-zZ\s]+$/, "Only alphabets are allowed").required("First Name is required"),
-            lastName: Yup.string().matches(/^[aA-zZ\s]+$/, "Only alphabets are allowed").required("Last Name is required"),
-            birthDate: Yup.string().required("Birth date is required").test(
-                "DOB",
-                "Age must be at least 18 years",
-                (date) => moment().diff(moment(date), "years") >= 18
-            ),
-            nationality: Yup.string().matches(/^[aA-zZ\s]+$/, "Only alphabets are allowed").required("Nationality is required"),
-            gender: Yup.string().required("Gender is required"),
-            maritalStatus: Yup.string().required("Marital Status is required"),
-            phone: Yup.string().min(12, 'Minimum 10 digits!').max(14, 'Maximum 14 digits!').required("Phone Number is required"),
-            email: Yup.string().required("Email is required").email("Invalid mail address"),
-            address: Yup.string().required("Address is required"),
-            city: Yup.string().matches(/^[aA-zZ\s]+$/, "Only alphabets are allowed").required("City is required"),
-            state: Yup.string().matches(/^[aA-zZ\s]+$/, "Only alphabets are allowed").required("State is required"),
-            country: Yup.string().matches(/^[aA-zZ\s]+$/, "Only alphabets are allowed").required("Country is required"),
-            pincode: Yup.string().min(5, 'Must be exactly 5 digits').max(5, 'Must be exactly 5 digits').required("Pincode is required"),
-            occupation: Yup.string().matches(/^[aA-zZ\s]+$/, "Only alphabets are allowed").required("Occupation is required"),
-            //annualIncome  : Yup.string().required("Annual Income is required"), 
-            //isAgreed: Yup.boolean().oneOf([true], "You must agree to the terms and conditions."),
-            //.required("You must agree to the terms and conditions."),
+                          <CCol>
+                            <CFormInput
+                              type="text"
+                              id="floatingInput"
+                              name="nationality"
+                              value={values.nationality}
+                              floatingClassName="mb-2"
+                              floatingLabel="nationality"
+                              placeholder="Nationality"
+                              onChange={handleInputChange}
+                              onChangeCapture={handleChange}
+                              onBlur={handleBlur}
+                              invalid={touched.nationality && !!errors.nationality}
+                            />
+                            <ErrorMessage name="nationality" component="div" className="text-danger" />
+                          </CCol>
+                        </CRow>
+                        <CRow xs={{ gutter: 2 }} className="mb-2 mt-2">
+                          <CCol>
+                            <CFormSelect
+                              name="maritalStatus"
+                              floatingLabel="Marital Status"
+                              value={values.maritalStatus}
+                              onChange={handleChange}
+                              onBlur={handleBlur}
+                              invalid={touched.maritalStatus && !!errors.maritalStatus}
+                              options={[
+                                { value: 'select', label: 'Select' },
+                                { value: 'married', label: 'Married' },
+                                { value: 'unmarried', label: 'Unmarried' },
+                              ]}
+                            />
+                            <ErrorMessage
+                              name="maritalStatus"
+                              component="div"
+                              className="text-danger"
+                            />
+                          </CCol>
+                          <CCol>
+                            <div className="form-group">
+                              <label htmlFor="spouseStatus">Spouse:</label>
+                              <div>
+                                <label style={{paddingLeft:'30px',paddingRight:'30px'}}>
+                                  <input
+                                    type="radio"
+                                    name="spouseStatus"
+                                    value="yes"
+                                    checked={state.spouseStatus === 'yes'}
+                                    onChange={handleInputChange}
+                                  />
+                                  Yes
+                                </label>
+                                <label  style={{paddingRight:'30px'}}>
+                                  <input
+                                    type="radio"
+                                    name="spouseStatus"
+                                    value="no"
+                                    checked={state.spouseStatus === 'no'}
+                                    onChange={handleInputChange}
+                                  />
+                                  No
+                                </label>
+                              </div>
+                            </div>
+                          </CCol>
+                        </CRow>
+                       
+                        <CRow>
+                          <CCol className="text-start">
+                            <div>
+                              Email<span style={{ color: 'red', fontSize: '20px' }}>*</span>
+                            </div>
+                          </CCol>
+                        </CRow>
+                        <CRow xs={{ gutter: 2 }}>
+                          <CCol>
+                            <CFormInput
+                              type="text"
+                              id="floatingInput"
+                              name="email"
+                              value={values.email}
+                              floatingClassName="mb-2"
+                              floatingLabel="Email address"
+                              placeholder="name@example.com"
+                              onChange={handleInputChange}
+                              onChangeCapture={handleChange}
+                              onBlur={handleBlur}
+                              invalid={touched.email && !!errors.email}
+                            />
+                            <ErrorMessage
+                              name="email"
+                              component="div"
+                              className="errmsg text-danger"
+                            ></ErrorMessage>
+                          </CCol>
+                        </CRow>
+                       
 
-        })
-    }
+                        <CRow xs={{ gutter: 2 }}>
+                          <CCol>
+                            <CFormSelect
+                              name="nationalIdType"
+                              floatingLabel="National ID Type"
+                              value={values.nationalIdType}
+                              onChange={handleInputChange}
+                              onChangeCapture={handleChange}
+                              onBlur={handleBlur}
+                              invalid={touched.nationalIdType && !!errors.nationalIdType}
+                              options={[
+                                { value: '', label: 'Select National ID Type' },
+                                { value: 'Aadhaar', label: 'Aadhaar' },
+                                { value: 'PAN', label: 'PAN' },
+                                { value: 'Passport', label: 'Passport' },
+                                { value: 'DrivingLicense', label: 'Driving License' },
+                                { value: 'VoterID', label: 'Voter ID' },
+                                // Add more options as needed
+                              ]}
+                            />
+                            <ErrorMessage
+                              name="nationalIdType"
+                              component="div"
+                              className="errmsg text-danger"
+                            />
+                          </CCol>
 
+                          <CCol>
+                            <CFormInput
+                              type="text"
+                              id="floatingInput"
+                              name="nationalId"
+                              value={values.nationalId}
+                              floatingClassName="mb-2"
+                              floatingLabel="National Id"
+                              // placeholder=""
+                              onChange={handleInputChange}
+                              onChangeCapture={handleChange}
+                              onBlur={handleBlur}
+                              invalid={touched.nationalId && !!errors.nationalId}
+                            />
+                            <ErrorMessage
+                              name="nationalId"
+                              component="div"
+                              className="errmsg text-danger"
+                            ></ErrorMessage>
+                          </CCol>
+                        </CRow>
+                        <CRow xs={{ gutter: 3 }}>
+                         
+                          <CCol>
+                            <CFormInput
+                              type="text"
+                              id="floatingInput"
+                              name="state"
+                              value={values.state}
+                              floatingClassName="mb-2"
+                              floatingLabel="State"
+                              placeholder="State"
+                              onChange={handleInputChange}
+                              onChangeCapture={handleChange}
+                              onBlur={handleBlur}
+                              invalid={touched.state && !!errors.state}
+                            />
+                            <ErrorMessage name="state" component="div" className="text-danger" />
+                          </CCol>
+                          <CCol>
+                          <CFormInput
+                            type="text"
+                            id="floatingInput"
+                            name="city"
+                            value={values.city}
+                            floatingClassName="mb-2"
+                            floatingLabel="City"
+                            placeholder="City"
+                            onChange={handleInputChange}
+                            onChangeCapture={handleChange}
+                            onBlur={handleBlur}
+                            invalid={touched.city && !!errors.city}
+                          />
+                          <ErrorMessage name="city" component="div" className="text-danger" />
+                        </CCol>
+                        <CCol>
+                        <CFormInput
+                          type="text"
+                          id="floatingInput"
+                          name="postalCode"
+                          value={values.postalCode}
+                          floatingClassName="mb-2"
+                          floatingLabel="Postal Code"
+                          placeholder="postal Code"
+                          onChange={handleInputChange}
+                          onChangeCapture={handleChange}
+                          onBlur={handleBlur}
+                          invalid={touched.postalCode && !!errors.postalCode}
+                        />
+                        <ErrorMessage name="postalCode" component="div" className="text-danger" />
+                      </CCol>
+                        </CRow>
+                        <CCol>
+                            <CFormSelect
+                              name="employmentStatus"
+                              floatingLabel="Employment Status"
+                              value={values.employmentStatus}
+                              onChange={handleChange}
+                              onBlur={handleBlur}
+                              invalid={touched.employmentStatus && !!errors.employmentStatus}
+                              options={[
+                                { value: 'select', label: 'Select' },
+                                { value: 'married', label: 'Married' },
+                                { value: 'unmarried', label: 'Unmarried' },
+                              ]}
+                            />
+                            <ErrorMessage
+                              name="employmentStatus"
+                              component="div"
+                              className="text-danger"
+                            />
+                          </CCol>
+                        <CRow>
+                          <CCol className="text-start">
+                            <div>
+                              Employment Details:
+                              <span style={{ color: 'red', fontSize: '20px' }}>*</span>
+                            </div>
+                          </CCol>
+                        </CRow>
+                        <CRow>
+                        <CCol>
+                        <select
+                          name="employmentStatus"
+                          value={state.employmentStatus}
+                          onChange={handleInputChange}
+                          id="employmentStatus"
+                          className="form-control"
+                        >
+                          <option value="">Select Employment Status</option>
+                          <option value="employed">Employed</option>
+                          <option value="self-employed">Self-employed</option>
+                          <option value="unemployed">Unemployed</option>
+                        </select>
+                        <ErrorMessage name="employmentStatus" component="div" className="text-danger" />
 
-    return (
-        <>
-            <ToastContainer />
-            <Container className="d-flex justify-content-center align-items-center">
-                <CRow>
-                    <CCol>
-                        <CCard className="mb-3 d-flex justify-content-center align-items-center" style={{ maxWidth: '980px' }}>
-                            <CRow className="g-0">
-                                <CCol md={6}>
-                                    <CCardImage src='src/assets/images/registor.jpg' style={{ height: '100%' }} />
-                                </CCol>
-                                <CCol md={6}>
-                                    <CCol>
-                                        <CCardBody>
-                                            <CCardTitle><strong>Customer Registration Form</strong></CCardTitle>
-                                            <Formik
-                                                enableReinitialize="true"
-                                                initialValues={initialValues}
-                                                validationSchema={ValidationSchema}
-                                                validateOnBlur={true}  // Validates when input loses focus
-                                                validateOnChange={true}  // Validation only on form submission
-                                                onSubmit={SubmitData}
-                                            >
-                                                {({ values, setFieldValue, handleChange, handleSubmit, resetForm, handleBlur, errors, touched }) => (
-                                                    <Form id="myForm" onSubmit={handleSubmit} >
-                                                        <CRow>
-                                                            <CCol className="text-start" >
-                                                                {/* <CCardSubtitle>Customer Details</CCardSubtitle> */}
-                                                                <div >Personal Details:</div>
-                                                            </CCol>
-                                                        </CRow>
-                                                        <CRow xs={{ gutter: 2 }}>
-                                                            <CCol>
-                                                                <CFormInput id="floatingInput"
-                                                                    type="text"
-                                                                    name="firstName"
-                                                                    floatingClassName="mb-2"
-                                                                    floatingLabel="First Name"
-                                                                    placeholder="First Name"
-                                                                    value={values.target}
-                                                                    onChange={handleInputChange}
-                                                                    onChangeCapture={handleChange}
-                                                                    onBlur={handleBlur}
-                                                                    invalid={touched.firstName && !!errors.firstName} />
-                                                                    
-                                                                <ErrorMessage name="firstName" component="div" className='errmsg text-danger'></ErrorMessage>
-                                                            </CCol>
-                                                            <CCol>
-                                                                <CFormInput id="floatingInput"
-                                                                    type="text"
-                                                                    name="lastName"
-                                                                    floatingClassName="mb-2"
-                                                                    floatingLabel="Last Name"
-                                                                    placeholder="Last Name"
-                                                                    value={values.target}
-                                                                    onChange={handleInputChange}
-                                                                    onChangeCapture={handleChange}
-                                                                    onBlur={handleBlur}
-                                                                    invalid={touched.lastName && !!errors.lastName}
-                                                                />
-                                                                <ErrorMessage name="lastName" component="div" className='errmsg text-danger'></ErrorMessage>
-                                                            </CCol>
-                                                        </CRow>
+                      </CCol>
+                         
+                        </CRow>
+                        <CRow>
+                          <div className="d-grid gap-2 d-md-flex justify-content-md-end mt-3">
+                            <CButton
+                              id="cancel"
+                              type="button"
+                              color="danger"
+                              onClick={() => document.getElementById('myForm').reset()}
+                            >
+                              Cancel
+                            </CButton>
+                            <CButton id="bttn" type="submit" disabled={isSubmitting}>
+                              {isSubmitting ? <CSpinner /> : 'Submit'}
+                            </CButton>
+                          </div>
+                        </CRow>
+                      </Form>
+                    )}
+                  </Formik>
+                </CCardBody>
+              </CCol>
+            </CCard>
+          </CCol>
+        </CRow>
+      </Container>
+    </>
+  )
+}
 
-
-                                                        <CRow xs={{ gutter: 2 }}>
-                                                            <CCol >
-                                                                <CFormInput type="date"
-                                                                    id="floatingInput"
-                                                                    name="birthDate"
-                                                                    floatingClassName="mb-2"
-                                                                    floatingLabel="DOB"
-                                                                    placeholderText="mm/dd/yyyy"
-                                                                    selected={values.birthDate ? new Date(values.birthDate) : null}
-                                                                    onChange={(e) => { dateHandleChange("birthDate", e) }}
-                                                                    onChangeCapture={handleChange}
-                                                                    onBlur={handleBlur}
-                                                                    invalid={touched.birthDate && !!errors.birthDate}
-                                                                />
-                                                                <ErrorMessage name="birthDate" component="div" className='errmsg text-danger'></ErrorMessage>
-                                                            </CCol>
-                                                            <CCol >
-                                                                <CFormInput type="text"
-                                                                    //id="floatingInput"
-                                                                    name="nationality"
-                                                                    floatingClassName="mb-2"
-                                                                    floatingLabel="Nationality"
-                                                                    placeholder="Nationality"
-                                                                    value={values.target}
-                                                                    onChange={handleInputChange}
-                                                                    onChangeCapture={handleChange}
-                                                                    onBlur={handleBlur}
-                                                                    invalid={touched.nationality && !!errors.nationality}
-                                                                />
-                                                                <ErrorMessage name="nationality" component="div" className='errmsg text-danger'></ErrorMessage>
-                                                            </CCol>
-                                                        </CRow>
-                                                        <CRow xs={{ gutter: 2 }}>
-                                                            <CCol className='text-start'>
-                                                                {/* <CFormLabel> Gender </CFormLabel> */}
-                                                                <CFormSelect
-                                                                    size="md" name="gender" className="mb-2" style={{ color: 'gray' }}
-                                                                    floatingClassName="mb-2"
-                                                                    floatingLabel="Gender"
-                                                                    placeholder="Gender"
-                                                                    defaultValue={state.gender}
-                                                                    onChange={(e) => {
-                                                                        //setFieldValue("gender", e), 
-                                                                        selectFieldHandleChange("gender", e.target.value)
-                                                                    }}
-                                                                    options={[
-                                                                        { value: 'select', label: 'Select' },
-                                                                        { value: 'Male', label: 'Male' },
-                                                                        { value: 'Female', label: 'Female' },
-                                                                        { value: 'Other', label: 'Other' },
-                                                                    ]}
-                                                                    invalid={touched.gender && !!errors.gender}
-                                                                />
-                                                                <ErrorMessage name="gender" component="div" className='errmsg text-danger'></ErrorMessage>
-                                                            </CCol>
-                                                            <CCol className='text-start'>
-                                                                {/* <CFormLabel> Marital Status </CFormLabel> */}
-                                                                <CFormSelect
-                                                                    size="md" name="maritalStatus" className="mb-2" style={{ color: 'gray' }}
-                                                                    //floatingClassName="mb-2"
-                                                                    floatingLabel="Marital Status"
-                                                                    placeholder="Marital Status"
-                                                                    defaultValue={state.maritalStatus}
-                                                                    onBlur={handleBlur}
-                                                                    options={[
-                                                                        { value: 'select', label: 'Select' },
-                                                                        { label: 'Married', value: 'married' },
-                                                                        { label: 'Unmarried', value: 'unmarried' },
-                                                                    ]}
-                                                                    onChange={(e) => {
-                                                                        //setFieldValue("maritalStatus", e.target.value),
-                                                                        selectFieldHandleChange("maritalStatus", e.target.value)
-                                                                    }}
-                                                                    onChangeCapture={handleChange}
-                                                                    invalid={touched.maritalStatus && !!errors.maritalStatus}
-                                                                />
-                                                                <ErrorMessage name="maritalStatus" component="div" className='errmsg text-danger'></ErrorMessage>
-                                                            </CCol>
-                                                        </CRow>
-                                                        <CRow>
-                                                            <CCol className="text-start" >
-                                                                <div >Contact Details:</div>
-                                                            </CCol>
-                                                        </CRow>
-                                                        <CRow >
-                                                            <CCol >
-                                                                <CFormInput type="text"
-                                                                    id="floatingInput"
-                                                                    name="phone"
-                                                                    value={values.target}
-                                                                    floatingClassName="mb-2"
-                                                                    floatingLabel="Phone number"
-                                                                    placeholder="Phone Number"
-                                                                    onChange={handleInputChange}
-                                                                    onChangeCapture={handleChange}
-                                                                    onBlur={handleBlur}
-                                                                    invalid={touched.phone && !!errors.phone}
-                                                                />
-                                                                <ErrorMessage name="phone" component="div" className='errmsg text-danger'></ErrorMessage>
-                                                            </CCol>
-                                                            <CCol >
-                                                                <CFormInput type="text"
-                                                                    id="floatingInput"
-                                                                    name="email"
-                                                                    value={values.target}
-                                                                    floatingClassName="mb-2"
-                                                                    floatingLabel="Email address"
-                                                                    placeholder="name@example.com"
-                                                                    onChange={handleInputChange}
-                                                                    onChangeCapture={handleChange}
-                                                                    onBlur={handleBlur}
-                                                                    invalid={touched.email && !!errors.email}
-                                                                />
-                                                                <ErrorMessage name="email" component="div" className='errmsg text-danger'></ErrorMessage>
-                                                            </CCol>
-                                                        </CRow>
-                                                        <CRow>
-                                                            <CCol className="text-start" >
-                                                                <div >Address:</div>
-                                                            </CCol>
-                                                        </CRow>
-                                                        <CRow>
-                                                            <CCol>
-                                                                <CFormInput type="text"
-                                                                    id="floatingInput"
-                                                                    name="address"
-                                                                    value={values.target}
-                                                                    floatingClassName="mb-2"
-                                                                    floatingLabel="Street address"
-                                                                    placeholder="Street address"
-                                                                    onChange={handleInputChange}
-                                                                    onChangeCapture={handleChange}
-                                                                    onBlur={handleBlur}
-                                                                    invalid={touched.address && !!errors.address}
-                                                                />
-                                                                <ErrorMessage name="address" component="div" className='errmsg text-danger'></ErrorMessage>
-                                                            </CCol>
-                                                        </CRow>
-                                                        <CRow xs={{ gutter: 3 }}>
-                                                            <CCol><CFormInput type="text"
-                                                                id="floatingInput"
-                                                                name="city"
-                                                                value={values.target}
-                                                                floatingClassName="mb-2"
-                                                                floatingLabel="City"
-                                                                placeholder="City"
-                                                                onChange={handleInputChange}
-                                                                onChangeCapture={handleChange}
-                                                                onBlur={handleBlur}
-                                                                invalid={touched.city && !!errors.city}
-                                                            />
-                                                                <ErrorMessage name="city" component="div" className='errmsg text-danger'></ErrorMessage>
-                                                            </CCol>
-                                                            <CCol><CFormInput type="text"
-                                                                id="floatingInput"
-                                                                name="state"
-                                                                value={values.target}
-                                                                floatingClassName="mb-2"
-                                                                floatingLabel="State"
-                                                                placeholder="State"
-                                                                onChange={handleInputChange}
-                                                                onChangeCapture={handleChange}
-                                                                onBlur={handleBlur}
-                                                                invalid={touched.state && !!errors.state}
-                                                            />
-                                                                <ErrorMessage name="state" component="div" className='errmsg text-danger'></ErrorMessage>
-                                                            </CCol>
-                                                            <CCol><CFormInput type="text"
-                                                                id="floatingInput"
-                                                                name="country"
-                                                                value={values.target}
-                                                                floatingClassName="mb-2"
-                                                                floatingLabel="Country"
-                                                                placeholder="Country"
-                                                                onChange={handleInputChange}
-                                                                onChangeCapture={handleChange}
-                                                                onBlur={handleBlur}
-                                                                invalid={touched.country && !!errors.country}
-                                                            />
-                                                                <ErrorMessage name="country" component="div" className='errmsg text-danger'></ErrorMessage>
-                                                            </CCol>
-                                                        </CRow>
-                                                        <CRow>
-                                                            <CCol ><CFormInput type="text"
-                                                                id="floatingInput"
-                                                                name="pincode"
-                                                                value={values.target}
-                                                                floatingClassName="mb-2"
-                                                                floatingLabel="Pincode"
-                                                                placeholder="Pincode"
-                                                                onChange={handleInputChange}
-                                                                onChangeCapture={handleChange}
-                                                                onBlur={handleBlur}
-                                                                invalid={touched.pincode && !!errors.pincode}
-                                                            />
-                                                                <ErrorMessage name="pincode" component="div" className='errmsg text-danger'></ErrorMessage>
-                                                            </CCol>
-                                                        </CRow>
-                                                        <CRow>
-                                                            <CCol className="text-start" >
-                                                                <div >Employment Information:</div>
-                                                            </CCol>
-                                                        </CRow>
-                                                        <CRow xs={{ gutter: 2 }}>
-                                                            <CCol>
-                                                                <CFormInput type="text"
-                                                                    id="floatingInput"
-                                                                    name="occupation"
-                                                                    value={values.target}
-                                                                    floatingClassName="mb-2"
-                                                                    floatingLabel="Occupation"
-                                                                    placeholder="Occupation"
-                                                                    onChange={handleInputChange}
-                                                                    onChangeCapture={handleChange}
-                                                                    onBlur={handleBlur}
-                                                                    invalid={touched.occupation && !!errors.occupation}
-                                                                />
-                                                                <ErrorMessage name="occupation" component="div" className='errmsg text-danger'></ErrorMessage>
-                                                            </CCol>
-                                                            <CCol>
-                                                                <CFormInput type="text"
-                                                                    id="floatingInput"
-                                                                    name="annualIncome"
-                                                                    value={values.target}
-                                                                    floatingClassName="mb-2"
-                                                                    floatingLabel="Annual Income"
-                                                                    placeholder="Annual Income"
-                                                                    onChange={handleInputChange}
-                                                                    onChangeCapture={handleChange}
-                                                                    onBlur={handleBlur}
-                                                                    invalid={touched.annualIncome && !!errors.annualIncome}
-                                                                />
-                                                                <ErrorMessage name="annualIncome" component="div" className='errmsg text-danger'></ErrorMessage>
-                                                            </CCol>
-                                                        </CRow>
-                                                        <CRow>
-                                                            <div className="d-grid gap-2 d-md-flex justify-content-md-end">
-                                                                <CButton id="cancel" as="input" type="reset" value="Cancel" //onClick={() => {
-                                                                // Example logic to reset form fields could be placed here
-                                                                // document.getElementById("myForm").reset(); }}
-                                                                />
-                                                                <CButton id="bttn" as="input" type="submit" value="Submit" />
-                                                            </div>
-                                                        </CRow>
-                                                    </Form>
-                                                )}
-                                            </Formik>
-                                        </CCardBody>
-                                    </CCol>
-                                </CCol>
-                            </CRow>
-                        </CCard>
-                    </CCol>
-                </CRow>
-            </Container>
-        </>
-    );
-};
-
-export default CreateCustomer;
+export default CreateCustomer

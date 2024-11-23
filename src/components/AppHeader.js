@@ -1,6 +1,6 @@
 /* eslint-disable prettier/prettier */
 import React, { useEffect, useRef, useState } from 'react'
-import { Link, NavLink } from 'react-router-dom'
+import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux'
 import icons from '../assets/images/avatars/loanB.ico'
 import {
@@ -36,15 +36,57 @@ import {
 import { AppBreadcrumb } from './index'
 import { AppHeaderDropdown } from './header/index'
 import { Collapse } from '@coreui/coreui'
-import { auto } from '@popperjs/core'
+import { auto, left } from '@popperjs/core'
 import { Block } from '@mui/icons-material'
 import { blueGrey } from '@mui/material/colors'
 import { CChartLine } from '@coreui/react-chartjs'
+import axios from 'axios'
+
 
 const AppHeader = () => {
   const headerRef = useRef()
   const { colorMode, setColorMode } = useColorModes('coreui-free-react-admin-template-theme')
   const [isOpen, setIsOpen] = useState(false)
+const navigate=useNavigate();
+
+  const handleStart = () => {
+    sessionStorage.clear();
+
+navigate('/customerForm');
+    // axios.post('http://localhost:8080/startWorkFlow')
+    //   .then((response) => {
+    //     // Axios considers any status code in the 2xx range as a success
+    //     // So, no need for response.ok
+    //     if (response.status !== 200) {
+    //       throw new Error('Network response was not ok');
+    //     }
+    //     return response.data; // Axios responses already return JSON data in the 'data' property
+    //   })
+    //   .then((data) => {
+    //     console.log(data);
+    //   })
+    //   .catch((error) => {
+    //     console.error('There was a problem with the fetch operation:', error.message);
+    //   });
+    }
+
+    const handleApplyLoan = () => {
+      axios.post('http://localhost:8080/startLoanRequestWorkFlow')
+          .then((response) => {
+              // Axios automatically parses successful responses
+              console.log('Workflow started:', response.data);
+              if (response.status !== 200) {
+                throw new Error('Network response was not ok');
+              }
+          })
+          .catch((error) => {
+              console.error('There was a problem with the loan request workflow:', error.message);
+          });
+  };
+  const handleApplyLoans=()=>{
+    nav('\selectType');
+  }
+
   return (
     <CHeader position="sticky" className="p-0" ref={headerRef}>
       <CContainer className=" ">
@@ -55,17 +97,17 @@ const AppHeader = () => {
 
             </a>
           </CNavItem>
-          <CNavItem className="d-none d-md-block highlight" >
-            <CNavLink to="/home" as={NavLink}>
-              Home</CNavLink>
-          </CNavItem>
-          <CNavItem className="d-none d-md-block highlight" >
-            <CNavLink to="/createCustomer" as={NavLink}>
-              New Customer</CNavLink>
-          </CNavItem>
-          <CNavItem className="d-none d-md-block highlight" >
-            <CNavLink href="#" className='loan nav-link-custom'>Loan Request</CNavLink>
-          </CNavItem>
+            <CNavItem className="d-none d-md-block highlight" >
+              <CNavLink to="/home" as={NavLink} style={{ paddingLeft: '645px' }}>
+                Home</CNavLink>
+            </CNavItem>
+            <CNavItem className="d-none d-md-block highlight" >
+              <CNavLink to="/customerForm" as={NavLink} style={{ margin: '0 20px 0 20px' }} onClick={handleStart}>
+                New Customer</CNavLink>
+            </CNavItem>
+            <CNavItem className="d-none d-md-block highlight" >
+              <CNavLink to="/selectType" as={NavLink} onClick={handleApplyLoans}>Loan Request</CNavLink>
+            </CNavItem>
         </CHeaderNav>
         <div className="d-flex flex-column">
           <a href="#">
@@ -84,8 +126,8 @@ const AppHeader = () => {
           <li className="nav-item ">
             <div className="vr h-100 mx-2 text-body text-opacity-75"></div>
           </li>
-          <CDropdown variant="nav-item" placement="bottom-end">
-            <CDropdownToggle caret={false}>
+          <CDropdown variant="nav-item" placement="bottom-end" style={{marginTop:'12px'}}>
+            <CDropdownToggle caret={false} >
               {colorMode === 'dark' ? (
                 <CIcon icon={cilMoon} size="lg" />
               ) : colorMode === 'auto' ? (
@@ -100,6 +142,7 @@ const AppHeader = () => {
                 className="d-flex align-items-center"
                 as="button"
                 type="button"
+                
                 onClick={() => setColorMode('light')}
               >
                 <CIcon className="me-2" icon={cilSun} size="lg" /> Light
@@ -148,7 +191,7 @@ const AppHeader = () => {
             }}
           >
             <CCardBody style={{ listStyle: 'none' }}>
-              
+
               <CNavItem>
                 <CNavLink to="/createCustomer" as={NavLink}>
                   New Customer</CNavLink>
